@@ -580,6 +580,13 @@ function route() {
   window.scrollTo(0, 0);
 }
 
+/* ================= 离线：注册 Service Worker（打包成 App 后也靠它离线可用） ================= */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
 function init() {
   initLibrary(document.querySelector('[data-view="books"]'), LIBRARIES.books);
   initLibrary(document.querySelector('[data-view="movies"]'), LIBRARIES.movies);

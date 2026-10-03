@@ -20,12 +20,24 @@ globalThis.localStorage = {
 };
 globalThis.sessionStorage = { getItem: () => null, setItem: () => {} };
 globalThis.alert = () => {};
-const el = () => ({ innerHTML: '', textContent: '', style: {}, dataset: {}, value: '',
+// 不会返回 null 的假元素：让 init() 真正跑一遍，才能抓到空引用
+const el = () => ({ innerHTML: '', textContent: '', placeholder: '', value: '', src: '', paused: true,
+  duration: 0, currentTime: 0, children: [], style: {}, dataset: {},
   classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, appendChild() {}, append() {},
-  addEventListener() {}, querySelectorAll: () => [], querySelector: () => null,
+  reset() {}, play: () => Promise.resolve(), pause() {}, removeAttribute() {}, focus() {},
+  addEventListener() {}, querySelectorAll: () => [], querySelector: () => el(),
   remove() {}, closest: () => null, scrollIntoView() {}, getBoundingClientRect: () => ({ left: 0, width: 0 }) });
-const documentStub = { getElementById: () => null, querySelector: () => null, body: el(),
-  querySelectorAll: () => [], createElement: el, addEventListener() {} };
+const KNOWN_IDS = ['audio', 'music-title', 'music-progress', 'music-bar', 'music-hint'];
+const byId = {};
+KNOWN_IDS.forEach(id => { byId[id] = el(); });
+const documentStub = {
+  getElementById: id => byId[id] || null,
+  querySelector: () => el(),
+  querySelectorAll: () => [],
+  createElement: el,
+  addEventListener() {},
+  body: el()
+};
 
 const appSrc = read('app.js');
 const html = read('index.html');
@@ -36,6 +48,10 @@ const windowStub = { addEventListener() {}, scrollTo() {}, marked: null };
 const api = new Function('document', 'localStorage', 'sessionStorage', 'window', 'alert', 'location',
   appSrc + '\n;return { DB, esc, starsHTML, paginate, splitTags, md };'
 )(documentStub, globalThis.localStorage, globalThis.sessionStorage, windowStub, globalThis.alert, globalThis.location);
+
+ok('init() 在假 DOM 上完整跑通（空引用/拼错都会在这里炸）', true);
+ok('播放器在无音乐时不报错并写回标题', byId['music-title'].textContent === '无音乐', byId['music-title'].textContent);
+ok('播放器进度条按无时长收敛到 0%', byId['music-progress'].style.width === '0%', byId['music-progress'].style.width);
 
 ok('esc 转义标签', api.esc('<img src=x onerror=1>') === '&lt;img src=x onerror=1&gt;');
 ok('esc 保留普通文本', api.esc('都柏林的雪 & 风') === '都柏林的雪 &amp; 风');
@@ -116,6 +132,21 @@ const missing = NEEDS.filter(c => clsCount(c) === 0);
 ok('app.js 需要的 class 都在 index.html 里', missing.length === 0, missing.join(','));
 for (const c of libShared) ok(`书架与影单各有一份 .${c}`, clsCount(c) === 2, 'count=' + clsCount(c));
 for (const c of shared3) ok(`书架/影单/手札各有一份 .${c}`, clsCount(c) === 3, 'count=' + clsCount(c));
+
+// app.js 里写下的每个选择器都要对得上某处真实标记（拼错、漏抄都会在这里露出来）
+const GENERATED = ['category-button'];   // 由 app.js 自己创建
+const selectorLits = [...appSrc.matchAll(/(?:\$|querySelector(?:All)?)\(\s*['"]([^'"]+)['"]\s*\)/g)].map(m => m[1]);
+const badSel = [];
+for (const sel of selectorLits) {
+  for (const m of sel.matchAll(/\.([A-Za-z][\w-]*)/g)) {
+    if (clsCount(m[1]) === 0 && !GENERATED.includes(m[1])) badSel.push(`${sel} → .${m[1]}`);
+  }
+  for (const m of sel.matchAll(/\[data-view="([^"]+)"\]/g)) {
+    if (!views.includes(m[1])) badSel.push(`${sel} → view ${m[1]}`);
+  }
+}
+ok('app.js 的选择器都对得上真实标记', badSel.length === 0 && selectorLits.length > 20,
+  `bad=${badSel.join(' | ')} found=${selectorLits.length}`);
 const usedIds = [...appSrc.matchAll(/getElementById\(['"]([^'"]+)['"]\)/g)].map(m => m[1]);
 const ghost = usedIds.filter(id => !ids.includes(id));
 ok('app.js 无悬空 getElementById', ghost.length === 0, ghost.join(','));
@@ -128,7 +159,57 @@ ok('journal 用 id 寻址而非下标', !/editEntry\(index\)/.test(appSrc) && ap
 ok('编辑走就地更新而不是新增', appSrc.includes('Object.assign(items[i], patch)'));
 ok('删除有二次确认', (appSrc.match(/confirm\(/g) || []).length >= 3);
 
-// ---- 5. 旧文件确实清掉了 ----
+// ---- 5. PWA：manifest / 图标 / Service Worker（打包成 APK 全靠这三样） ----
+const manifest = JSON.parse(read('manifest.json'));
+ok('manifest 必填字段齐全',
+  !!manifest.name && !!manifest.short_name && !!manifest.start_url && !!manifest.theme_color
+  && !!manifest.background_color && !!manifest.display, JSON.stringify(Object.keys(manifest)));
+ok('manifest 中文没乱码也没 BOM',
+  manifest.name === '都柏林的雪' && manifest.short_name === '都柏林的雪'
+  && fs.readFileSync(path.join(dir, 'manifest.json'))[0] !== 0xEF, manifest.name);
+ok('manifest 可在独立窗口运行', ['standalone', 'fullscreen', 'minimal-ui'].includes(manifest.display));
+ok('manifest scope 覆盖 start_url', manifest.start_url.startsWith(manifest.scope || './'));
+
+const pngSize = f => {
+  const b = fs.readFileSync(path.join(dir, f));
+  const magic = b.subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
+  return magic ? { w: b.readUInt32BE(16), h: b.readUInt32BE(20) } : null;
+};
+const sizes = manifest.icons.map(i => i.sizes);
+ok('manifest 带 192 与 512 图标', sizes.includes('192x192') && sizes.includes('512x512'), sizes.join(','));
+ok('manifest 带 maskable 图标以适配安卓启动器裁切',
+  manifest.icons.some(i => (i.purpose || '').includes('maskable')));
+
+for (const icon of manifest.icons) {
+  const p = pngSize(icon.src);
+  ok(`图标 ${icon.src} 存在且尺寸与声明一致`,
+    !!p && `${p.w}x${p.h}` === icon.sizes && icon.type === 'image/png',
+    p ? `${p.w}x${p.h}` : '缺失或不是 PNG');
+}
+ok('apple-touch-icon 180x180', (pngSize('icons/apple-touch-icon.png') || {}).w === 180);
+
+const sw = read('sw.js');
+ok('Service Worker 有 install/activate/fetch 三件事',
+  /addEventListener\('install'/.test(sw) && /addEventListener\('activate'/.test(sw) && /addEventListener\('fetch'/.test(sw));
+ok('Service Worker 会跳过等待并接管', sw.includes('skipWaiting') && sw.includes('clients.claim'));
+ok('Service Worker 逐个缓存而不是 addAll（一条失败不至于装不上）',
+  sw.includes('cache.add(u).catch(() => {})') && !sw.includes('addAll'));
+const swShell = (sw.match(/const SHELL = \[([\s\S]*?)\]/) || [, ''])[1]
+  .split(',').map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+const missingShell = swShell.filter(u => {
+  const rel = u.replace(/^\.\//, '');
+  if (rel === '') return !fs.existsSync(path.join(dir, 'index.html'));
+  return !fs.existsSync(path.join(dir, rel));
+});
+ok('Service Worker 预缓存清单里的文件都存在（写错一个就会装不上）',
+  missingShell.length === 0 && swShell.length >= 8, missingShell.join(','));
+ok('Service Worker 清掉旧版本缓存', /caches\.keys\(\)/.test(sw) && /caches\.delete/.test(sw));
+ok('index.html 挂上 manifest 与图标',
+  html.includes('href="manifest.json"') && html.includes('href="icons/apple-touch-icon.png"'));
+ok('app.js 在 load 后注册 sw.js 且失败不炸',
+  appSrc.includes("'serviceWorker' in navigator") && appSrc.includes("register('sw.js').catch(() => {})"));
+
+// ---- 6. 旧文件确实清掉了 ----
 for (const f of ['books.html', 'movies.html', 'journal.html', 'settings.html', 'script.js']) {
   ok(f + ' 已清理', !fs.existsSync(path.join(dir, f)));
 }
