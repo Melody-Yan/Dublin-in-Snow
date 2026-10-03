@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.melody.dublininsnow",
+    "sha256_cert_fingerprints": ["F9:77:8B:0A:A2:A1:92:2D:02:2D:FF:5A:90:80:6C:89:E8:7D:EF:FB:1E:AB:B5:A1:65:C2:B5:D5:65:05:58:FC"]
+  }
+}]

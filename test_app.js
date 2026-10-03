@@ -209,7 +209,21 @@ ok('index.html 挂上 manifest 与图标',
 ok('app.js 在 load 后注册 sw.js 且失败不炸',
   appSrc.includes("'serviceWorker' in navigator") && appSrc.includes("register('sw.js').catch(() => {})"));
 
-// ---- 6. 旧文件确实清掉了 ----
+// ---- 6. Digital Asset Links：没有它，APK 打开时顶部会挂着浏览器地址栏 ----
+const al = JSON.parse(read('.well-known/assetlinks.json'));
+ok('assetlinks 是数组且第一项有 target', Array.isArray(al) && !!al[0] && !!al[0].target);
+ok('assetlinks 声明了 handle_all_urls',
+  (al[0].relation || []).includes('delegate_permission/common.handle_all_urls'), (al[0].relation || []).join(','));
+ok('assetlinks 的包名与 APK 一致',
+  al[0].target.package_name === 'com.melody.dublininsnow', al[0].target.package_name);
+ok('assetlinks 的 namespace 是 android_app', al[0].target.namespace === 'android_app');
+const fps = al[0].target.sha256_cert_fingerprints || [];
+ok('assetlinks 有 SHA-256 指纹且格式正确',
+  fps.length > 0 && fps.every(f => /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(f)), fps.join(','));
+ok('包名是合法的 Java 包名（Google Play 不接受改包名）',
+  /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(al[0].target.package_name));
+
+// ---- 7. 旧文件确实清掉了 ----
 for (const f of ['books.html', 'movies.html', 'journal.html', 'settings.html', 'script.js']) {
   ok(f + ' 已清理', !fs.existsSync(path.join(dir, f)));
 }
