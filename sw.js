@@ -1,12 +1,13 @@
 /* 都柏林的雪 · Service Worker
    自己的文件走 cache-first（秒开、离线可用），外部 CDN 只在联网时顺手缓存一份。
    任何一条缓存失败都不影响安装——否则手机在没有网的时候会连 app 都装不上。 */
-const CACHE = 'dublin-snow-v1';
+const CACHE = 'dublin-snow-v2';
 
 const SHELL = [
   './',
   './index.html',
   './app.js',
+  './vendor/marked.min.js',
   './style.css',
   './manifest.json',
   './icons/icon-192.png',
@@ -15,13 +16,12 @@ const SHELL = [
   './icons/apple-touch-icon.png'
 ];
 
-// 背景图和 marked 是别人的域名，能缓存就缓存，缓存不上也不影响使用
+// 背景图是另一个域名，能缓存就缓存，缓存不上也不影响使用
 const EXTERNAL = [
   'https://resource-17v.pages.dev/auc.jpg',
   'https://resource-17v.pages.dev/books.png',
   'https://resource-17v.pages.dev/movies.png',
-  'https://resource-17v.pages.dev/journal.png',
-  'https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js'
+  'https://resource-17v.pages.dev/journal.png'
 ];
 
 self.addEventListener('install', event => {

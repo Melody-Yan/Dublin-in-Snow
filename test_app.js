@@ -42,6 +42,7 @@ const documentStub = {
 const appSrc = read('app.js');
 const html = read('index.html');
 const css = read('style.css');
+const vendorSrc = read('vendor/marked.min.js');
 
 globalThis.location = { hash: '' };
 const windowStub = { addEventListener() {}, scrollTo() {}, marked: null };
@@ -87,7 +88,11 @@ ok('index.html 无内联脚本', /<script(?![^>]*\bsrc=)[^>]*>/.test(html) === f
 ok('index.html 只有一个 body 标签', (html.match(/<body/g) || []).length === 1);
 ok('index.html 不再引用已删除的页面或 script.js',
   !/(books|movies|journal|settings)\.html/.test(html) && !html.includes('script.js'));
-ok('marked 是唯一的 CDN 依赖', (html.match(/https?:\/\/cdn\./g) || []).length === 1);
+// 启动关键路径上不许有第三方域名：TWA 装在国产 ROM 上时，一个拉不动的 CDN 就是永远停在启动图
+ok('index.html 不加载任何第三方脚本', (html.match(/<script[^>]*\bsrc="https?:/g) || []).length === 0
+  && html.includes('src="vendor/marked.min.js"'));
+ok('自托管的 marked 是完整的 v4.3.0 构建', /marked v4\.3\.0/.test(vendorSrc) && vendorSrc.length > 40000);
+ok('两个脚本都用 defer，不阻塞首屏', (html.match(/<script[^>]*\bdefer\b/g) || []).length === 2);
 
 const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
 const dupIds = ids.filter((id, i) => ids.indexOf(id) !== i);
