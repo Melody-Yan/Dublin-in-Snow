@@ -27,12 +27,19 @@ const el = () => ({ innerHTML: '', textContent: '', style: {}, dataset: {}, valu
 const documentStub = { getElementById: () => null, querySelector: () => null, body: el(),
   querySelectorAll: () => [], createElement: el, addEventListener() {} };
 
-const api = new Function('document', 'localStorage', 'sessionStorage', 'window', 'alert',
-  read('app.js') + '\n;return { DB, esc, starsHTML, paginate, splitTags, md };'
-)(documentStub, globalThis.localStorage, globalThis.sessionStorage, {}, globalThis.alert);
+const appSrc = read('app.js');
+const html = read('index.html');
+const css = read('style.css');
+
+globalThis.location = { hash: '' };
+const windowStub = { addEventListener() {}, scrollTo() {}, marked: null };
+const api = new Function('document', 'localStorage', 'sessionStorage', 'window', 'alert', 'location',
+  appSrc + '\n;return { DB, esc, starsHTML, paginate, splitTags, md };'
+)(documentStub, globalThis.localStorage, globalThis.sessionStorage, windowStub, globalThis.alert, globalThis.location);
 
 ok('esc 转义标签', api.esc('<img src=x onerror=1>') === '&lt;img src=x onerror=1&gt;');
 ok('esc 保留普通文本', api.esc('都柏林的雪 & 风') === '都柏林的雪 &amp; 风');
+ok('esc 容忍 null/undefined', api.esc(null) === '' && api.esc(undefined) === '');
 ok('starsHTML 无评分不崩', api.starsHTML(undefined) === '<span class="stars"><span class="on"></span>☆☆☆☆☆</span>', api.starsHTML(undefined));
 ok('starsHTML 满星', api.starsHTML(5) === '<span class="stars"><span class="on">★★★★★</span></span>');
 ok('starsHTML 越界被夹住', api.starsHTML(99) === api.starsHTML(5) && api.starsHTML(-3) === api.starsHTML(0));
@@ -57,54 +64,74 @@ ok('DB 损坏数据回退默认值', JSON.stringify(api.DB.get('t', ['fallback']
 console.warn = origWarn;
 ok('md 无 marked 时退化为纯文本', api.md('<b>x</b>') === '&lt;b&gt;x&lt;/b&gt;');
 
-// ---- 2. 五个页面：脚本语法 + 资源引用 ----
-const pages = ['index.html', 'books.html', 'movies.html', 'journal.html', 'settings.html'];
-for (const page of pages) {
-  const html = read(page);
-  ok(page + ' 引用 style.css', html.includes('href="style.css"'));
-  ok(page + ' 引用 app.js', html.includes('src="app.js"'));
-  const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-  if (page === 'index.html') ok(page + ' 无需内联脚本', inline.length === 0);
-  else ok(page + ' 有内联脚本', inline.length > 0);
-  inline.forEach((code, i) => {
-    try { new Function(code); ok(`${page} 内联脚本#${i} 语法通过`, true); }
-    catch (e) { ok(`${page} 内联脚本#${i} 语法通过`, false, e.message); }
-  });
-  // 重复页面级函数：共享逻辑必须只在 app.js 里定义一次
-  const dup = ['function esc(', 'function paginate(', 'function renderPager(', 'function splitTags(']
-    .filter(sig => html.includes(sig));
-  ok(page + ' 不重复定义共享函数', dup.length === 0, dup.join(','));
-  ok(page + ' 不再引用已删除的 script.js', !html.includes('script.js'));
-}
+// ---- 2. 单页结构：脚本语法 + 资源引用 ----
+ok('index.html 引用 style.css', html.includes('href="style.css"'));
+ok('index.html 引用 app.js', html.includes('src="app.js"'));
+ok('index.html 无内联脚本', /<script(?![^>]*\bsrc=)[^>]*>/.test(html) === false);
+ok('index.html 只有一个 body 标签', (html.match(/<body/g) || []).length === 1);
+ok('index.html 不再引用已删除的页面或 script.js',
+  !/(books|movies|journal|settings)\.html/.test(html) && !html.includes('script.js'));
+ok('marked 是唯一的 CDN 依赖', (html.match(/https?:\/\/cdn\./g) || []).length === 1);
 
-// 播放器只在 app.js 里实现，页面通过 data-music 委托；五个页面的播放器结构必须一致
-const playerIds = ['audio', 'music-title', 'music-bar', 'music-progress'];
-// app.js 会按需取用的元素：页面上缺一个就等于原来的 TypeError 老毛病
-const needs = {
-  'index.html': playerIds,
-  'books.html': [...playerIds, 'categories', 'categoryQuote', 'search', 'list', 'pager',
-    'addBtn', 'form', 'f-title', 'f-sub', 'f-review', 'f-tags', 'f-rating', 'f-submit', 'f-cancel'],
-  'movies.html': [...playerIds, 'categories', 'categoryQuote', 'search', 'list', 'pager',
-    'addBtn', 'form', 'f-title', 'f-sub', 'f-review', 'f-tags', 'f-rating', 'f-submit', 'f-cancel'],
-  'journal.html': [...playerIds, 'tabs', 'search', 'entryText', 'saveBtn', 'cancelBtn', 'entries', 'pager'],
-  'settings.html': [...playerIds, 'music-input', 'music-list', 'addBtn', 'exportBtn', 'importBtn', 'importFile']
-};
-for (const page of pages) {
-  const html = read(page);
-  ok(page + ' 用 data-music 接线播放器', html.includes('data-music="toggle"'));
-  ok(page + ' 未复制旧播放器函数', !/function (playSong|togglePlay|prevSong|nextSong)\(/.test(html));
-  const missing = needs[page].filter(id => !html.includes(`id="${id}"`));
-  ok(page + ' 所需元素齐全', missing.length === 0, missing.join(','));
-  // 页面自己 getElementById 的东西也必须真的存在
-  const used = [...html.matchAll(/getElementById\(['"]([^'"]+)['"]\)/g)].map(m => m[1]);
-  const ghost = used.filter(id => !html.includes(`id="${id}"`));
-  ok(page + ' 无悬空 getElementById', ghost.length === 0, ghost.join(','));
-  ok(page + ' 播放器结构一致',
-    (html.match(/<div class="controls">/g) || []).length === 1 && html.includes('class="music-player"'));
+const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
+const dupIds = ids.filter((id, i) => ids.indexOf(id) !== i);
+ok('id 全局唯一（合并五页后的主要风险）', dupIds.length === 0, dupIds.join(','));
+
+// ---- 3. 路由：app.js 的 VIEWS 必须和 index.html 的 section 一一对应 ----
+const views = (appSrc.match(/const VIEWS = \[([^\]]*)\]/) || [, ''])[1]
+  .split(',').map(s => s.trim().replace(/['"]/g, '')).filter(Boolean);
+ok('app.js 声明了 VIEWS', views.length === 5, views.join('/'));
+
+const sections = [...html.matchAll(/<section class="view[^"]*" data-view="([^"]+)"/g)].map(m => m[1]);
+ok('每个视图都有对应 section', JSON.stringify(sections.slice().sort()) === JSON.stringify(views.slice().sort()),
+  'sections=' + sections.join('/') + ' views=' + views.join('/'));
+
+const links = [...html.matchAll(/data-view-link="([^"]+)"/g)].map(m => m[1]);
+ok('导航项都能路由到真实视图', links.every(v => views.includes(v)) && links.length === 4, links.join('/'));
+ok('主页有入口（标题指回 #home）', html.includes('href="#home"'));
+ok('设置的空音乐提示指向 #settings', /id="music-hint"[\s\S]{0,120}href="#settings"/.test(html));
+ok('route() 写 body.dataset.view 驱动背景', appSrc.includes('document.body.dataset.view = view'));
+ok('style.css 随视图换背景', ['books', 'movies', 'journal']
+  .every(v => css.includes(`body[data-view="${v}"]`)));
+ok('style.css 保留 .hidden', /\.hidden \{ display: none !important; \}/.test(css));
+ok('style.css 没有旧的按页 class 残留',
+  !/body\.(home|books|movies|journal|settings)\b/.test(css) && !/#home-link/.test(css)
+  && !/#search\b/.test(css) && !/#entryText/.test(css));
+
+// ---- 4. app.js 取用的元素必须真的存在（原来 TypeError 的老毛病） ----
+const NEEDS = [
+  'lib-list', 'pager', 'category-quote', 'search-input', 'entry-form', 'add-btn', 'rating',
+  'category-container', 'f-title', 'f-sub', 'f-review', 'f-tags', 'f-submit', 'f-cancel',
+  'journal-list', 'entry-text', 'save-btn', 'cancel-btn', 'tab-buttons',
+  'music-list', 'music-input', 'music-add-btn', 'export-btn', 'import-file', 'import-btn',
+  'music-player'
+];
+const libShared = ['lib-list', 'category-quote', 'entry-form', 'rating', 'category-container',
+  'f-title', 'f-sub', 'f-review', 'f-tags', 'f-submit', 'f-cancel'];
+// 书架 / 影单 / 手札三处都有的公共件
+const shared3 = ['pager', 'search-input'];
+const classTokens = [...html.matchAll(/class="([^"]+)"/g)].flatMap(m => m[1].split(/\s+/));
+const clsCount = c => classTokens.filter(t => t === c).length;
+const missing = NEEDS.filter(c => clsCount(c) === 0);
+ok('app.js 需要的 class 都在 index.html 里', missing.length === 0, missing.join(','));
+for (const c of libShared) ok(`书架与影单各有一份 .${c}`, clsCount(c) === 2, 'count=' + clsCount(c));
+for (const c of shared3) ok(`书架/影单/手札各有一份 .${c}`, clsCount(c) === 3, 'count=' + clsCount(c));
+const usedIds = [...appSrc.matchAll(/getElementById\(['"]([^'"]+)['"]\)/g)].map(m => m[1]);
+const ghost = usedIds.filter(id => !ids.includes(id));
+ok('app.js 无悬空 getElementById', ghost.length === 0, ghost.join(','));
+ok('播放器只有一个实例', (html.match(/class="music-player"/g) || []).length === 1
+  && (html.match(/data-music="toggle"/g) || []).length === 1);
+ok('未复制旧播放器函数', !/function (playSong|togglePlay|prevSong|nextSong)\(/.test(appSrc + html));
+ok('无音乐时整块隐藏播放器而不是报警', appSrc.includes("panel.classList.toggle('hidden', !has)")
+  && !/没有找到音乐/.test(appSrc));
+ok('journal 用 id 寻址而非下标', !/editEntry\(index\)/.test(appSrc) && appSrc.includes("String(e.id) === String(id)"));
+ok('编辑走就地更新而不是新增', appSrc.includes('Object.assign(items[i], patch)'));
+ok('删除有二次确认', (appSrc.match(/confirm\(/g) || []).length >= 3);
+
+// ---- 5. 旧文件确实清掉了 ----
+for (const f of ['books.html', 'movies.html', 'journal.html', 'settings.html', 'script.js']) {
+  ok(f + ' 已清理', !fs.existsSync(path.join(dir, f)));
 }
-ok('音乐为空时按 body.settings 决定去留', read('app.js').includes("classList.contains('settings')"));
-ok('journal 用 id 寻址而非下标', !/function editEntry\(index\)/.test(read('journal.html')));
-ok('index 只有一个 body 标签', (read('index.html').match(/<body/g) || []).length === 1);
 
 console.log(failed ? `\n${failed} 项失败` : '\n全部通过');
 process.exit(failed ? 1 : 0);
