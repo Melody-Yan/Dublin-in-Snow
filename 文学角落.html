@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>你的文学角落</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <style>
+        body {
+            font-family: "Georgia", serif;
+            background: url('https://resource-17v.pages.dev/journal.png') no-repeat center center/cover;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            text-align: left;
+        }
+        h1 {
+            font-size: 26px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        .quote {
+            font-size: 16px;
+            text-align: center;
+            opacity: 0.7;
+            margin-bottom: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+        }
+        .tab-buttons button {
+            background: none;
+            border: 1px solid #fff;
+            color: #fff;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+        .tab-buttons button:hover {
+            background: #fff;
+            color: #000;
+        }
+        #search {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #ddd;
+        }
+        .entry {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+        .entry h3 {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.7;
+        }
+        .entry p {
+            margin-top: 5px;
+        }
+        .entry .edit-btn, .entry .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .entry .edit-btn {
+            right: 50px;
+        }
+        .back-button {
+            display: block;
+            margin: 20px auto;
+            text-decoration: none;
+            color: #fff;
+            border: 1px solid #fff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .back-button:hover {
+            background: #fff;
+            color: #000;
+        }
+       /* 播放器样式 */
+        .music-player {
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 10px 15px;
+            width: 250px;
+        }
+        .music-player button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .music-player button:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+ .music-player {
+            margin: 6px auto; /* 播放器与诗歌卡片的间距更小 */
+            padding: 6px 10px; 
+            width: 220px;
+        }
+        .music-player button {
+            font-size: 16px;
+        }
+
+
+        .pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .pagination button {
+            background: none;
+            border: 1px solid #fff;
+            color: #fff;
+            padding: 5px 15px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+        .pagination button:hover {
+            background: #fff;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>你的文学角落</h1>
+        <p class="quote">"一切经历过的都会成为我们的诗篇。" ——伍尔夫</p>
+
+        <!-- 返回主页 -->
+        <a href="index.html" class="back-button">返回主页</a>
+
+        <!-- 选项卡 -->
+        <div class="tab-buttons">
+            <button onclick="switchTab('碎碎念')">碎碎念</button>
+            <button onclick="switchTab('随笔')">随笔</button>
+            <button onclick="switchTab('灵感')">灵感</button>
+            <button onclick="switchTab('长篇')">长篇</button>
+        </div>
+
+        <!-- 搜索框 -->
+        <input type="text" id="search" placeholder="搜索你的文字..." oninput="searchEntries()">
+
+        <!-- 文本框 -->
+        <textarea id="entryText" placeholder="在这里写下你的想法..." spellcheck="false"></textarea>
+        <button onclick="saveEntry()">保存</button>
+
+        <!-- 文章列表 -->
+        <div id="entries"></div>
+
+        <!-- 音乐播放器 -->
+       <!-- 播放器 -->
+    <div class="music-player">
+        <button onclick="prevSong()">⏮</button>
+        <button onclick="togglePlay()">⏸</button>
+        <button onclick="nextSong()">⏭</button>
+        <audio id="audio-player"></audio>
+    </div>
+    </div>
+        
+        <!-- 分页功能 -->
+        <div id="pagination" class="pagination"></div>
+    </div>
+
+    <script>
+        let currentTab = '碎碎念';
+        let currentPage = 1;
+        let entriesPerPage = 4;
+        let musicTracks = JSON.parse(localStorage.getItem('musicTracks')) || [];
+        let currentTrackIndex = 0;
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('entryText').value = '';
+            loadEntries();
+        }
+
+        function saveEntry() {
+            let text = document.getElementById('entryText').value.trim();
+            if (!text) {
+                alert("内容不能为空！");
+                return;
+            }
+
+            let entries = JSON.parse(localStorage.getItem('entries')) || [];
+            entries.push({ tab: currentTab, text, date: new Date().toLocaleString() });
+            localStorage.setItem('entries', JSON.stringify(entries));
+
+            document.getElementById('entryText').value = '';
+            loadEntries();
+        }
+
+        function loadEntries() {
+            let entries = JSON.parse(localStorage.getItem('entries')) || [];
+            let filteredEntries = entries.filter(entry => entry.tab === currentTab);
+            let container = document.getElementById('entries');
+            container.innerHTML = '';
+
+            // 分页处理
+            let paginatedEntries = filteredEntries.slice((currentPage - 1) * entriesPerPage, currentPage * entriesPerPage);
+
+            paginatedEntries.forEach((entry, index) => {
+                let div = document.createElement('div');
+                div.classList.add('entry');
+                div.innerHTML = `
+                    <h3>${entry.date}</h3>
+                    <p>${marked.parse(entry.text)}</p>
+                    <button class="edit-btn" onclick="editEntry(${index})">编辑</button>
+                    <button class="delete-btn" onclick="deleteEntry(${index})">删除</button>
+                `;
+                container.appendChild(div);
+            });
+
+            updatePagination(filteredEntries.length);
+        }
+
+        function updatePagination(totalEntries) {
+            let totalPages = Math.ceil(totalEntries / entriesPerPage);
+            let pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            
+            for (let i = 1; i <= totalPages; i++) {
+                let button = document.createElement('button');
+                button.innerHTML = i;
+                button.onclick = () => {
+                    currentPage = i;
+                    loadEntries();
+                };
+                pagination.appendChild(button);
+            }
+        }
+
+        function editEntry(index) {
+            let entries = JSON.parse(localStorage.getItem('entries')) || [];
+            let entry = entries[(currentPage - 1) * entriesPerPage + index];
+            document.getElementById('entryText').value = entry.text;
+            deleteEntry((currentPage - 1) * entriesPerPage + index);
+        }
+
+        function deleteEntry(index) {
+            let entries = JSON.parse(localStorage.getItem('entries')) || [];
+            entries.splice((currentPage - 1) * entriesPerPage + index, 1);
+            localStorage.setItem('entries', JSON.stringify(entries));
+            loadEntries();
+        }
+
+        function searchEntries() {
+            let query = document.getElementById('search').value.toLowerCase();
+            let entries = JSON.parse(localStorage.getItem('entries')) || [];
+            let filteredEntries = entries.filter(entry => entry.text.toLowerCase().includes(query));
+            displayEntries(filteredEntries);
+        }
+
+        function displayEntries(entries) {
+            let container = document.getElementById('entries');
+            container.innerHTML = '';
+            entries.forEach(entry => {
+                let div = document.createElement('div');
+                div.classList.add('entry');
+                div.innerHTML = `
+                    <h3>${entry.date}</h3>
+                    <p>${marked.parse(entry.text)}</p>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 音乐播放功能
+        function prevTrack() {
+            currentTrackIndex = (currentTrackIndex === 0) ? musicTracks.length - 1 : currentTrackIndex - 1;
+            document.getElementById('audioPlayer').src = musicTracks[currentTrackIndex];
+            document.getElementById('audioPlayer').play();
+        }
+
+        function nextTrack() {
+            currentTrackIndex = (currentTrackIndex === musicTracks.length - 1) ? 0 : currentTrackIndex + 1;
+            document.getElementById('audioPlayer').src = musicTracks[currentTrackIndex];
+            document.getElementById('audioPlayer').play();
+        }
+function prevTrack() {
+    if (musicTracks.length === 0) return;
+    currentTrackIndex = (currentTrackIndex === 0) ? musicTracks.length - 1 : currentTrackIndex - 1;
+    document.getElementById('audioPlayer').src = musicTracks[currentTrackIndex];
+    document.getElementById('audioPlayer').play();
+}
+
+function nextTrack() {
+    if (musicTracks.length === 0) return;
+    currentTrackIndex = (currentTrackIndex === musicTracks.length - 1) ? 0 : currentTrackIndex + 1;
+    document.getElementById('audioPlayer').src = musicTracks[currentTrackIndex];
+    document.getElementById('audioPlayer').play();
+}
+if (musicTracks.length > 0) {
+    document.getElementById('audioPlayer').src = musicTracks[0];
+}
+let audio = document.getElementById("audio-player");
+        let songIndex = 0;
+
+        // 从localStorage获取音乐链接
+        let songs = JSON.parse(localStorage.getItem("musicLinks") || "[]");
+        
+        // 如果没有歌曲数据，给出提示
+        if (songs.length === 0) {
+            alert("没有找到音乐，请先添加歌曲链接。");
+        }
+
+        function playSong(index) {
+            if (songs.length > 0) {
+                audio.src = songs[index];
+                audio.play();
+            }
+        }
+
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        }
+
+        function prevSong() {
+            if (songs.length > 0) {
+                songIndex = (songIndex - 1 + songs.length) % songs.length;
+                playSong(songIndex);
+            }
+        }
+
+        function nextSong() {
+            if (songs.length > 0) {
+                songIndex = (songIndex + 1) % songs.length;
+                playSong(songIndex);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // 在页面加载后加载并展示歌曲列表
+            console.log("当前音乐列表：", songs);
+            if (songs.length > 0) {
+                playSong(songIndex);  // 默认播放第一首
+            }
+        });
+
+        // 页面初始化加载条目
+        loadEntries();
+    </script>
+</body>
+</html>

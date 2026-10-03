@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐播放器和书籍管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #musicPlayer {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        #bookList {
+            margin-top: 20px;
+        }
+        .book {
+            background-color: #fff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .delete-button, .edit-button {
+            margin-left: 10px;
+            color: red;
+            cursor: pointer;
+        }
+        .edit-button {
+            color: blue;
+        }
+        .book-form input, .book-form textarea, .book-form select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .book-form button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .book-form button:hover {
+            background-color: #45a049;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            margin: 0 5px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 音乐播放器 -->
+        <div id="musicPlayer">
+            <audio id="audio" controls>
+                <source id="audioSource" src="" type="audio/m4a">
+                Your browser does not support the audio element.
+            </audio>
+            <div>
+                <button onclick="playPrevious()">上一首</button>
+                <button onclick="playNext()">下一首</button>
+            </div>
+        </div>
+
+        <!-- 分类与书籍管理 -->
+        <div id="category">
+            <h2 id="categoryQuote">“在都柏林的雪中，总有未曾翻开的书页。”</h2>
+            <button onclick="changeCategory('snow')">雪</button>
+            <button onclick="changeCategory('reading')">阅读中</button>
+            <button onclick="changeCategory('finished')">已读</button>
+            <button onclick="changeCategory('abandoned')">已放弃</button>
+        </div>
+
+        <h2>书籍管理</h2>
+        <button onclick="showAddBookForm()">添加书籍</button>
+
+        <!-- 添加书籍表单 -->
+        <div id="addBookForm" style="display: none;">
+            <h3>添加书籍</h3>
+            <input type="text" id="bookTitle" placeholder="书名" required>
+            <input type="text" id="bookAuthor" placeholder="作者" required>
+            <textarea id="bookReview" placeholder="书评"></textarea>
+            <input type="text" id="bookTags" placeholder="标签">
+            <button onclick="addBook()">保存书籍</button>
+        </div>
+
+        <div id="bookList"></div>
+    </div>
+
+    <script>
+        let currentCategory = 'snow';
+
+        // 保存音乐路径到localStorage
+        function saveMusicPath(path) {
+            console.log("Saving music path: ", path);  // 调试信息
+            localStorage.setItem('musicPath', path);
+        }
+
+        // 加载音乐路径并播放
+        function loadMusic() {
+            const musicPath = localStorage.getItem('musicPath');
+            const audioElement = document.getElementById('audio');
+            const audioSource = document.getElementById('audioSource');
+            
+            console.log("Loaded music path: ", musicPath);  // 调试信息
+            
+            if (musicPath) {
+                audioSource.src = musicPath;  // 设置音频源
+                audioElement.load();  // 重新加载播放器
+                audioElement.play();  // 自动播放
+            } else {
+                // 如果没有音乐路径，设置为默认音乐
+                audioSource.src = "https://resource-17v.pages.dev/12hours.m4a";
+                audioElement.load();
+                audioElement.play();
+            }
+        }
+
+        // 播放上一首
+        function playPrevious() {
+            const audioElement = document.getElementById('audio');
+            const audioSource = document.getElementById('audioSource');
+            let currentSrc = audioSource.src;
+            const playlist = [
+                "https://resource-17v.pages.dev/12hours.m4a",
+                "https://resource-17v.pages.dev/anothertrack.m4a", // 添加其他音乐的路径
+                "https://resource-17v.pages.dev/yetanothertrack.m4a"
+            ];
+
+            let currentIndex = playlist.indexOf(currentSrc);
+            if (currentIndex > 0) {
+                audioSource.src = playlist[currentIndex - 1];
+            } else {
+                audioSource.src = playlist[playlist.length - 1]; // 循环到最后一首
+            }
+
+            console.log("Playing previous track: ", audioSource.src);  // 调试信息
+            audioElement.load();
+            audioElement.play();
+            saveMusicPath(audioSource.src);  // 保存新的播放路径
+        }
+
+        // 播放下一首
+        function playNext() {
+            const audioElement = document.getElementById('audio');
+            const audioSource = document.getElementById('audioSource');
+            let currentSrc = audioSource.src;
+            const playlist = [
+                "https://resource-17v.pages.dev/12hours.m4a",
+                "https://resource-17v.pages.dev/anothertrack.m4a", // 添加其他音乐的路径
+                "https://resource-17v.pages.dev/yetanothertrack.m4a"
+            ];
+
+            let currentIndex = playlist.indexOf(currentSrc);
+            if (currentIndex < playlist.length - 1) {
+                audioSource.src = playlist[currentIndex + 1];
+            } else {
+                audioSource.src = playlist[0]; // 循环到第一首
+            }
+
+            console.log("Playing next track: ", audioSource.src);  // 调试信息
+            audioElement.load();
+            audioElement.play();
+            saveMusicPath(audioSource.src);  // 保存新的播放路径
+        }
+
+        // 监听页面加载，自动加载音乐
+        window.onload = function() {
+            loadMusic();
+        };
+
+        // 显示添加书籍的表单
+        function showAddBookForm() {
+            document.getElementById('addBookForm').style.display = 'block';
+        }
+
+        // 添加书籍
+        function addBook() {
+            let title = document.getElementById('bookTitle').value;
+            let author = document.getElementById('bookAuthor').value;
+            let review = document.getElementById('bookReview').value;
+            let tags = document.getElementById('bookTags').value;
+            let dateAdded = new Date().toLocaleDateString();
+            let rating = 0; // 默认评分为0
+
+            if (!title || !author) {
+                alert('书名和作者不能为空！');
+                return;
+            }
+
+            let books = JSON.parse(localStorage.getItem('books')) || [];
+            books.unshift({ id: Date.now(), title, author, review, tags, category: currentCategory, dateAdded, rating });
+            localStorage.setItem('books', JSON.stringify(books));
+            document.getElementById('addBookForm').style.display = 'none';
+            loadBooks();
+        }
+
+        // 切换分类
+        function changeCategory(category) {
+            currentCategory = category;
+            let categoryQuote = document.getElementById('categoryQuote');
+
+            let quotes = {
+                "snow": "“在都柏林的雪中，总有未曾翻开的书页。”",  
+                "reading": "“旅途的灯未熄，文字依然温暖。”",  
+                "finished": "“落幕的章节，仍在心中吟诵。”",  
+                "abandoned": "“这里的书已经被遗忘，或许有一天会再次拾起。”"  
+            };
+
+            categoryQuote.innerText = quotes[category];
+            loadBooks();
+        }
+
+        // 加载书籍
+        function loadBooks(page = 1) {
+            let books = JSON.parse(localStorage.getItem('books')) || [];
+            let bookList = document.getElementById('bookList');
+            bookList.innerHTML = '';
+let filteredBooks = books.filter(book => book.category === currentCategory);
+
+            // 每页显示的书籍数量
+            let booksPerPage = 5;
+            let totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+            let startIndex = (page - 1) * booksPerPage;
+            let endIndex = Math.min(startIndex + booksPerPage, filteredBooks.length);
+            let paginatedBooks = filteredBooks.slice(startIndex, endIndex);
+
+            // 展示书籍
+            paginatedBooks.forEach(book => {
+                let bookDiv = document.createElement('div');
+                bookDiv.classList.add('book');
+                bookDiv.innerHTML = `
+                    <h3>${book.title}</h3>
+                    <p><strong>作者：</strong>${book.author}</p>
+                    <p><strong>标签：</strong>${book.tags || '无'}</p>
+                    <p><strong>书评：</strong>${book.review}</p>
+                    <p><strong>添加时间：</strong>${book.dateAdded}</p>
+                    <p><strong>评分：</strong>${'★'.repeat(book.rating)}</p>
+                    <button class="edit-button" onclick="editBook(${book.id})">编辑</button>
+                    <button class="delete-button" onclick="deleteBook(${book.id})">删除</button>
+                `;
+                bookList.appendChild(bookDiv);
+            });
+
+            // 分页
+            let paginationDiv = document.createElement('div');
+            paginationDiv.classList.add('pagination');
+            for (let i = 1; i <= totalPages; i++) {
+                let pageButton = document.createElement('button');
+                pageButton.innerText = i;
+                pageButton.onclick = () => loadBooks(i);
+                paginationDiv.appendChild(pageButton);
+            }
+            bookList.appendChild(paginationDiv);
+        }
+
+        // 删除书籍
+        function deleteBook(bookId) {
+            let books = JSON.parse(localStorage.getItem('books')) || [];
+            books = books.filter(book => book.id !== bookId);
+            localStorage.setItem('books', JSON.stringify(books));
+            loadBooks();
+        }
+
+        // 编辑书籍
+        function editBook(bookId) {
+            let books = JSON.parse(localStorage.getItem('books')) || [];
+            let book = books.find(book => book.id === bookId);
+            if (book) {
+                document.getElementById('bookTitle').value = book.title;
+                document.getElementById('bookAuthor').value = book.author;
+                document.getElementById('bookReview').value = book.review;
+                document.getElementById('bookTags').value = book.tags;
+                // 更改保存按钮为编辑
+                let saveButton = document.querySelector('.book-form button');
+                saveButton.onclick = () => updateBook(bookId);
+            }
+        }
+
+        // 更新书籍
+        function updateBook(bookId) {
+            let books = JSON.parse(localStorage.getItem('books')) || [];
+            let bookIndex = books.findIndex(book => book.id === bookId);
+
+            if (bookIndex !== -1) {
+                books[bookIndex].title = document.getElementById('bookTitle').value;
+                books[bookIndex].author = document.getElementById('bookAuthor').value;
+                books[bookIndex].review = document.getElementById('bookReview').value;
+                books[bookIndex].tags = document.getElementById('bookTags').value;
+                localStorage.setItem('books', JSON.stringify(books));
+                loadBooks();
+            }
+        }
+    </script>
+</body>
+</html>

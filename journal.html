@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心境手札</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="journal">
+
+  <div class="container">
+    <h1>心境手札</h1>
+    <p class="quote">“一切经历过的都会成为我们的诗篇。” ——伍尔夫</p>
+
+    <a href="index.html" class="back-button">返回主页</a>
+
+    <div class="tab-buttons" id="tabs"></div>
+
+    <input type="search" id="search" placeholder="搜索你的文字…" aria-label="搜索手札">
+
+    <textarea id="entryText" placeholder="在这里写下你的想法…（支持 Markdown）" spellcheck="false" aria-label="手札正文"></textarea>
+    <div class="form-actions">
+      <button type="button" class="pill" id="saveBtn">保存</button>
+      <button type="button" class="pill hidden" id="cancelBtn">取消</button>
+    </div>
+
+    <div id="entries"></div>
+    <div id="pager" class="pager"></div>
+
+    <div class="music-player">
+      <p id="music-title" class="music-title">无音乐</p>
+      <audio id="audio"></audio>
+      <div class="progress-container" id="music-bar"><div id="music-progress"></div></div>
+      <div class="controls">
+        <button data-music="prev" aria-label="上一首">⏮</button>
+        <button data-music="toggle" aria-label="播放或暂停">▶</button>
+        <button data-music="next" aria-label="下一首">⏭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    /* ponytail: marked 不做净化，正文只来自本机输入；要收外来备份时再加净化 */
+    const TABS = ['碎碎念', '随笔', '灵感', '长篇'];
+    const PER_PAGE = 4;
+
+    const $ = id => document.getElementById(id);
+    const entryBox = $('entries');
+    const textEl = $('entryText');
+    const saveBtn = $('saveBtn');
+    const cancelBtn = $('cancelBtn');
+
+    let tab = TABS[0], page = 1, query = '', editingId = null;
+
+    // 老数据没有 id，补一次，之后按 id 增删改（不再依赖数组下标）
+    (function migrate() {
+      const list = DB.get('entries', []);
+      let changed = false;
+      list.forEach((e, i) => { if (!e.id) { e.id = 'e' + Date.now() + i; changed = true; } });
+      if (changed) DB.set('entries', list);
+    })();
+
+    const all = () => DB.get('entries', []) || [];
+    const find = id => all().find(e => String(e.id) === String(id));
+
+    TABS.forEach(t => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.tab = t;
+      b.textContent = t;
+      b.onclick = () => { tab = t; page = 1; closeForm(); render(); };
+      $('tabs').appendChild(b);
+    });
+
+    function card(e) {
+      const el = document.createElement('article');
+      el.className = 'entry';
+      el.innerHTML = `
+        <h3>${esc(e.date || '')}${e.updated ? ' · 修改于 ' + esc(e.updated) : ''}${query.trim() ? ' · ' + esc(e.tab) : ''}</h3>
+        <div class="entry-body">${md(e.text)}</div>
+        <span class="actions">
+          <button class="icon-btn" data-act="edit" data-id="${esc(e.id)}">编辑</button>
+          <button class="icon-btn danger" data-act="del" data-id="${esc(e.id)}">删除</button>
+        </span>`;
+      return el;
+    }
+
+    function render() {
+      document.querySelectorAll('#tabs button')
+        .forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+
+      const q = query.trim().toLowerCase();
+      const items = all()
+        .filter(e => q || e.tab === tab)      // 有搜索词时跨栏目找，不要只搜当前这一栏
+        .filter(e => !q || String(e.text).toLowerCase().includes(q));
+
+      const state = paginate(items, page, PER_PAGE);
+      page = state.page;
+
+      entryBox.innerHTML = '';
+      if (!state.items.length) {
+        entryBox.innerHTML = `<p class="empty">${q ? '没有找到匹配的文字。' : '这里还是空的，写点什么吧。'}</p>`;
+      }
+      state.items.forEach(e => entryBox.appendChild(card(e)));
+      renderPager($('pager'), state, p => { page = p; render(); });
+    }
+
+    function closeForm() {
+      editingId = null;
+      textEl.value = '';
+      saveBtn.textContent = '保存';
+      cancelBtn.classList.add('hidden');
+    }
+
+    function save() {
+      const text = textEl.value.trim();
+      if (!text) { alert('内容不能为空！'); return; }
+      const list = all();
+      if (editingId !== null) {
+        const i = list.findIndex(e => String(e.id) === String(editingId));
+        if (i > -1) { list[i].text = text; list[i].updated = new Date().toLocaleString(); }
+      } else {
+        list.push({ id: 'e' + Date.now(), tab, text, date: new Date().toLocaleString() });
+      }
+      if (DB.set('entries', list)) { closeForm(); page = 1; render(); }
+    }
+
+    saveBtn.onclick = save;
+    cancelBtn.onclick = closeForm;
+    $('search').addEventListener('input', e => { query = e.target.value; page = 1; render(); });
+
+    entryBox.addEventListener('click', e => {
+      const btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (btn.dataset.act === 'edit') {
+        const item = find(id);
+        if (!item) return;
+        editingId = id;
+        textEl.value = item.text;
+        saveBtn.textContent = '保存修改';
+        cancelBtn.classList.remove('hidden');
+        textEl.focus();
+        textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if (!confirm('确定删除这条记录吗？')) return;
+      if (DB.set('entries', all().filter(x => String(x.id) !== id))) render();
+    });
+
+    render();
+  </script>
+</body>
+</html>

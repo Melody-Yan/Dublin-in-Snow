@@ -1,0 +1,358 @@
+/* 都柏林的雪 · 全站样式（唯一的样式表） */
+:root {
+  --panel: rgba(0, 0, 0, .55);
+  --panel-solid: rgba(0, 0, 0, .72);
+  --glass: rgba(255, 255, 255, .18);
+  --glass-hover: rgba(255, 255, 255, .4);
+  --cream: #fff8dc;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: Georgia, "Songti SC", "STSong", serif;
+  color: #fff;
+  text-align: center;
+  background-color: #0d1117;          /* 背景图加载不出来时也不会白底白字 */
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-attachment: fixed;
+  background-size: cover;
+  background-image: linear-gradient(rgba(0, 0, 0, .3), rgba(0, 0, 0, .3)),
+                    url('https://resource-17v.pages.dev/auc.jpg');
+}
+body.books    { background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,.3)), url('https://resource-17v.pages.dev/books.png'); }
+body.movies   { background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,.3)), url('https://resource-17v.pages.dev/movies.png'); }
+body.journal  { background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,.3)), url('https://resource-17v.pages.dev/journal.png'); }
+
+h1 { font-size: 38px; margin: 0 0 6px; text-shadow: 2px 2px 5px rgba(0, 0, 0, .6); }
+h2, h3 { font-size: 22px; margin: 18px 0 8px; }
+.quote { font-size: 15px; font-style: italic; opacity: .85; margin: 0 0 14px; }
+.hidden { display: none !important; }
+a { color: var(--cream); }
+
+.container { max-width: 900px; margin: 5vh auto 6vh; padding: 0 16px; }
+body.home .container { margin-top: 12vh; }
+
+.btn {
+  display: inline-block;
+  background: var(--glass);
+  color: #fff;
+  padding: 9px 18px;
+  margin: 5px;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 18px;
+  transition: background .3s;
+}
+.btn:hover { background: var(--glass-hover); }
+
+/* ---------- 播放器 ---------- */
+.music-player {
+  margin: 16px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--glass);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  width: min(340px, 100%);
+}
+.music-player .controls { width: 100%; }
+.music-player button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 17px;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.music-player button:hover { opacity: .7; }
+.music-title { font-size: 14px; opacity: .85; margin: 0 0 8px; word-break: break-all; }
+.music-empty { font-size: 14px; opacity: .85; margin: 10px 0; }
+.progress-container {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, .3);
+  margin: 6px 0 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  overflow: hidden;
+}
+#music-progress { height: 100%; width: 0; background: #fff; }
+.controls { display: flex; justify-content: space-around; }
+
+/* ---------- 首页诗句 ---------- */
+.poem {
+  display: inline-block;
+  max-width: 60%;
+  margin: 14px auto 0;
+  padding: 18px 22px;
+  background: rgba(0, 0, 0, .5);
+  border-radius: var(--radius);
+  font-style: italic;
+}
+.poem h3 { font-size: 19px; margin: 0 0 8px; }
+.poem p { font-size: 14px; line-height: 1.5; margin: 6px 0; }
+
+/* ---------- 书架 / 影单 ---------- */
+.category-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+.category-button {
+  background: rgba(0, 0, 0, .45);
+  color: #fff;
+  border: none;
+  padding: 9px 14px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .3s;
+}
+.category-button:hover { background: rgba(255, 255, 255, .45); color: #000; }
+.category-button.active { background: rgba(255, 255, 255, .88); color: #000; }
+.category-quote { font-style: italic; color: var(--cream); margin: 6px 0 16px; min-height: 1.3em; }
+.search-box input {
+  width: min(320px, 80%);
+  padding: 9px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-family: inherit;
+}
+.lib-list { max-width: 640px; margin: 18px auto; }
+
+.entry-card {
+  background: var(--panel-solid);
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  color: #f0f0f0;
+  text-align: left;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .5);
+}
+.entry-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.entry-head strong { font-size: 16px; }
+.by { font-size: 14px; opacity: .8; }
+.actions { margin-left: auto; display: flex; gap: 6px; }
+.icon-btn {
+  background: rgba(255, 255, 255, .18);
+  border: none;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.icon-btn:hover { background: rgba(255, 255, 255, .4); color: #000; }
+.icon-btn.danger { background: rgba(200, 40, 40, .65); }
+.icon-btn.danger:hover { background: rgb(220, 50, 50); color: #fff; }
+.meta { font-size: 13px; opacity: .9; margin-top: 6px; }
+.stars { color: #8a8a8a; letter-spacing: 1px; }
+.stars .on { color: gold; }
+.tag { color: var(--cream); margin-left: 4px; }
+.review { margin: 8px 0 0; font-size: 14px; line-height: 1.6; opacity: .95; }
+.empty { font-size: 15px; opacity: .75; padding: 24px; }
+
+.buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; margin: 20px 0; }
+.pill {
+  display: inline-block;
+  background: rgba(0, 0, 0, .7);
+  color: #fff;
+  border: none;
+  padding: 13px 18px;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .3s;
+}
+.pill:hover { background: rgba(255, 255, 255, .55); color: #000; }
+
+.entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 640px;
+  margin: 16px auto;
+  padding: 16px;
+  background: var(--panel-solid);
+  border-radius: var(--radius);
+  text-align: left;
+}
+.entry-form input,
+.entry-form textarea {
+  width: 100%;
+  padding: 9px;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-family: inherit;
+}
+.entry-form textarea { min-height: 80px; resize: vertical; }
+.entry-form .rating { display: flex; gap: 6px; }
+.entry-form .pill { align-self: center; }
+.form-actions { display: flex; justify-content: center; gap: 12px; }
+
+.rating { cursor: pointer; }
+.star { font-size: 20px; color: #8a8a8a; user-select: none; }
+.star:hover, .star.selected { color: gold; }
+
+.pager { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.page-button {
+  background: rgba(0, 0, 0, .55);
+  color: #fff;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.page-button:hover:not(:disabled) { background: rgba(255, 255, 255, .45); color: #000; }
+.page-button.active-page { background: #fff; color: #000; }
+.page-button:disabled { opacity: .35; cursor: default; }
+
+/* ---------- 心境手札 ---------- */
+body.journal { padding: 20px 0; }
+body.journal .container {
+  width: 92%;
+  max-width: 820px;
+  background: var(--panel-solid);
+  border-radius: 12px;
+  padding: 22px;
+  text-align: left;
+  box-shadow: 0 0 14px rgba(255, 255, 255, .15);
+}
+body.journal h1 { font-size: 26px; font-style: italic; text-align: center; }
+body.journal .quote { text-align: center; }
+.back-button {
+  display: block;
+  width: max-content;
+  margin: 0 auto 14px;
+  padding: 7px 14px;
+  border: 1px solid #fff;
+  border-radius: 5px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+}
+.back-button:hover { background: #fff; color: #000; }
+.tab-buttons { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.tab-buttons button {
+  background: none;
+  border: 1px solid #fff;
+  border-radius: 5px;
+  color: #fff;
+  padding: 8px 15px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: .3s;
+}
+.tab-buttons button:hover,
+.tab-buttons button.active { background: #fff; color: #000; }
+#search {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-family: inherit;
+}
+#entryText {
+  width: 100%;
+  min-height: 130px;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+.entry {
+  position: relative;
+  background: rgba(255, 255, 255, .1);
+  padding: 12px 14px;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+.entry h3 { margin: 0 0 6px; font-size: 13px; font-weight: normal; opacity: .7; }
+.entry .actions { position: absolute; top: 10px; right: 14px; }
+.entry-body { font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
+.entry-body p { margin: .4em 0; }
+.entry-body img { max-width: 100%; }
+
+/* ---------- 设置 ---------- */
+#home-link {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 9;
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+  padding: 9px 12px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 15px;
+}
+#home-link:hover { background: rgba(0, 0, 0, .85); }
+body.settings .container { max-width: 520px; margin-top: 8vh; display: flex; flex-direction: column; gap: 18px; }
+.card {
+  width: 100%;
+  padding: 20px;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, .12);
+}
+body.settings .music-player { display: block; width: 100%; padding: 18px; }
+.card input[type=text] {
+  width: 80%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 15px;
+  font-family: inherit;
+}
+.music-list { list-style: none; padding: 0; margin: 10px 0 0; }
+.music-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  margin: 6px 0;
+  background: rgba(255, 255, 255, .12);
+  border-radius: 5px;
+  font-size: 14px;
+  text-align: left;
+  word-break: break-all;
+}
+.music-list .name { flex: 1; cursor: pointer; }
+.music-list .name:hover { text-decoration: underline; }
+
+/* ---------- 小屏 ---------- */
+@media (max-width: 640px) {
+  body { background-attachment: scroll; }
+  h1 { font-size: 30px; }
+  .container { margin-top: 5vh; }
+  body.home .container { margin-top: 8vh; }
+  .poem { max-width: 94%; padding: 14px; }
+  .category-container { gap: 6px; }
+  .category-button { font-size: 14px; padding: 8px 10px; }
+  .music-player { width: auto; }
+  .buttons { gap: 10px; }
+  .pill { padding: 11px 14px; font-size: 15px; }
+}

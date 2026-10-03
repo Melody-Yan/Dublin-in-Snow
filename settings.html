@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="settings">
+
+  <a href="index.html" id="home-link">🏠 回到首页</a>
+
+  <div class="container">
+    <h1>设置</h1>
+
+    <div class="card">
+      <h3>音乐管理</h3>
+      <input type="text" id="music-input" placeholder="粘贴音乐直链（mp3 等）" aria-label="音乐链接">
+      <button type="button" class="pill" id="addBtn">添加</button>
+      <ul id="music-list" class="music-list"></ul>
+    </div>
+
+    <div class="card">
+      <h3>如果对世界失望就戴上耳机</h3>
+      <div class="music-player">
+        <p id="music-title" class="music-title">无音乐</p>
+        <audio id="audio"></audio>
+        <div class="progress-container" id="music-bar"><div id="music-progress"></div></div>
+        <div class="controls">
+          <button data-music="prev" aria-label="上一首">⏮</button>
+          <button data-music="toggle" aria-label="播放或暂停">▶</button>
+          <button data-music="next" aria-label="下一首">⏭</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>数据备份</h3>
+      <p class="quote">所有内容都只存在这台浏览器的本地存储里，换浏览器或清理数据前记得先导出。</p>
+      <div class="form-actions">
+        <button type="button" class="pill" id="exportBtn">导出备份</button>
+        <button type="button" class="pill" id="importBtn">导入备份</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    const KEYS = ['books', 'movies', 'entries', 'musicLinks'];
+
+    function renderList() {
+      const tracks = DB.get('musicLinks', []);
+      const ul = $('music-list');
+      ul.innerHTML = '';
+
+      if (!tracks.length) {
+        const li = document.createElement('li');
+        li.textContent = '还没有添加音乐。';
+        ul.appendChild(li);
+        return;
+      }
+
+      tracks.forEach((link, i) => {
+        const li = document.createElement('li');
+
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = (i + 1) + '. ' + (link.split('/').pop().split('?')[0] || link);
+        name.title = '点击播放：' + link;
+        name.onclick = () => Music.play(i);
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'icon-btn danger';
+        del.textContent = '删除';
+        del.onclick = () => {
+          const list = DB.get('musicLinks', []);
+          list.splice(i, 1);
+          if (DB.set('musicLinks', list)) { renderList(); Music.refresh(); }
+        };
+
+        li.append(name, del);
+        ul.appendChild(li);
+      });
+    }
+
+    $('addBtn').onclick = () => {
+      const input = $('music-input');
+      const url = input.value.trim();
+      if (!url) { alert('请先填写音乐链接。'); return; }
+      const list = DB.get('musicLinks', []);
+      if (list.includes(url)) { alert('这个链接已经在列表里了。'); return; }
+      list.push(url);
+      if (DB.set('musicLinks', list)) {
+        input.value = '';
+        renderList();
+        Music.refresh();
+      }
+    };
+
+    $('exportBtn').onclick = () => {
+      const data = {};
+      KEYS.forEach(k => {
+        const v = localStorage.getItem(k);
+        if (v !== null) data[k] = v;
+      });
+      if (!Object.keys(data).length) { alert('还没有可以备份的内容。'); return; }
+
+      const blob = new Blob(
+        [JSON.stringify({ app: '都柏林的雪', exportedAt: new Date().toISOString(), data }, null, 2)],
+        { type: 'application/json' }
+      );
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `都柏林的雪-备份-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    };
+
+    $('importBtn').onclick = () => $('importFile').click();
+
+    $('importFile').onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          const data = parsed && parsed.data ? parsed.data : parsed;
+          const found = KEYS.filter(k => typeof data[k] === 'string');
+          if (!found.length) throw new Error('没有可识别的数据');
+          if (!confirm('导入会覆盖当前的书籍、影单、手札和音乐设置，确定继续吗？')) return;
+          found.forEach(k => localStorage.setItem(k, data[k]));
+          alert('导入完成，页面将重新载入。');
+          location.reload();
+        } catch (err) {
+          alert('备份文件无法识别。');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    };
+
+    renderList();
+  </script>
+</body>
+</html>

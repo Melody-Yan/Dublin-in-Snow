@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>都柏林的雪</title>
+  <style>
+        body {
+            font-family: 'Georgia', serif;
+            background: url('https://resource-17v.pages.dev/auc.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            margin-top: 15vh;
+        }
+        h1 {
+            font-size: 40px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.6);
+            margin-bottom: 10px;
+        }
+        .btn {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            margin: 5px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* 播放器样式 */
+        .music-player {
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 10px 15px;
+            width: 250px;
+        }
+        .music-player button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .music-player button:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* 诗歌卡片 */
+        .poem {
+            margin-top: 30px;
+            max-width: 60%;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .poem h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        .poem p {
+            font-size: 15px;
+            line-height: 1.4;
+            text-align: center;
+            margin: 5px 0;
+        }
+
+    
+      .music-player {
+            margin: 6px auto; /* 播放器与诗歌卡片的间距更小 */
+            padding: 6px 10px; 
+            width: 220px;
+        }
+        .music-player button {
+            font-size: 16px;
+        }
+        .poem {
+            margin-top: 10px; /* 让诗歌更贴近卡片 */
+            max-width: 48%; /* 让它更窄一点，精致感更强 */
+            padding: 16px; /* 细微调整，让内容更紧凑 */
+
+        }
+    </style>
+</head>
+<body>
+
+    <body>
+
+    <div class="container">
+        <h1>都柏林的雪</h1>
+        <a href="books.html" class="btn">书架</a>
+        <a href="movies.html" class="btn">影单</a>
+        <a href="journal.html" class="btn">心境手札</a>
+        <a href="settings.html" class="btn">设置</a>
+    </div>
+
+    <!-- 播放器 -->
+    <div class="music-player">
+        <button onclick="prevSong()">⏮</button>
+        <button onclick="togglePlay()">⏸</button>
+        <button onclick="nextSong()">⏭</button>
+        <audio id="audio-player"></audio>
+    </div>
+
+<div class="poem">
+       <h3>What can I hold you with?</h3>
+            我用什么才能留驻你？<br>
+            Jorges Luis Borges<br>
+            博尔赫斯<br><br>
+            I offer you lean streets, desperate sunsets, the moon of the jagged suburbs.<br>
+            我给你贫穷的街道、绝望的日落和破败郊区的月亮。<br><br>
+            I offer you the bitterness of a man who has looked long and long at the lonely moon.<br>
+            我给你一个久久地望着孤月的人的悲哀。<br><br>
+            I offer you my ancestors, my dead men, the ghosts that living men have honoured in marble.<br>
+            我给你我已死去的先辈，人们用大理石纪念他们的幽灵：<br><br>
+            my father’s father killed in the frontier of Buenos Aires, two bullets through his lungs.<br>
+            在布宜偌斯艾利斯边境阵亡的我父亲的父亲，两颗子弹穿了他的胸膛。<br><br>
+            bearded and dead, wrapped by his soldiers in the hide of a cow;<br>
+            蓄着胡子的他死去了，士兵们用牛皮裹起他的尸体；<br><br>
+            my mother’s grandfather -just twentyfour- heading a charge of three hundred men in Perú, now ghosts on vanished horses.<br>
+            我母亲的祖父——时年二十四岁——在秘鲁率领三百名士兵冲锋，如今都成了消失的马背上的幽灵。<br><br>
+            I offer you whatever insight my books may hold. whatever manliness or humour my life.<br>
+            我给你我写的书中所能包含的一切悟力、我生活中所能有的男子气概或幽默。<br><br>
+            I offer you the loyalty of a man who has never been loyal.<br>
+            我给你一个从未有过信仰人的忠诚。<br><br>
+            I offer you that kernel of myself that I have saved somehow -the central heart that deals not in words, traffics not with dreams and is untouched by time, by joy, by adversities.<br>
+            我给你我设法保全的我自己的核心——不营字造句，不和梦想交易，不被时间、欢乐和逆境触动的核心。<br><br>
+            I offer you the memory of a yellow rose seen at sunset, years before you were born.<br>
+            我给你，早在你出生前多年的一个傍晚看到的一朵黄玫瑰的记忆。<br><br>
+            I offer you explanations of yourself, theories about yourself, authentic and surprising news of yourself.<br>
+            我给你对自己的解释，关于你自己的理论，你自己的真实而惊人的消息。<br><br>
+            I can give you my loneliness, my darkness, the hunger of my heart; I am trying to bribe you with uncertainty, with danger, with defeat.<br>
+            我给你我的寂寞、我的黑暗、我心的饥渴；我试图用困惑、危险、失败来打动你。</p>
+        </div>
+
+
+   <script>
+        let audio = document.getElementById("audio-player");
+        let songIndex = 0;
+
+        // 从localStorage获取音乐链接
+        let songs = JSON.parse(localStorage.getItem("musicLinks") || "[]");
+        
+        // 如果没有歌曲数据，给出提示
+        if (songs.length === 0) {
+            alert("没有找到音乐，请先添加歌曲链接。");
+        }
+
+        function playSong(index) {
+            if (songs.length > 0) {
+                audio.src = songs[index];
+                audio.play();
+            }
+        }
+
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        }
+
+        function prevSong() {
+            if (songs.length > 0) {
+                songIndex = (songIndex - 1 + songs.length) % songs.length;
+                playSong(songIndex);
+            }
+        }
+
+        function nextSong() {
+            if (songs.length > 0) {
+                songIndex = (songIndex + 1) % songs.length;
+                playSong(songIndex);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // 在页面加载后加载并展示歌曲列表
+            console.log("当前音乐列表：", songs);
+            if (songs.length > 0) {
+                playSong(songIndex);  // 默认播放第一首
+            }
+        });
+
+    </script>
+
+</body>
+</html>
