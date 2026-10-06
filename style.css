@@ -155,7 +155,10 @@ nav { margin-bottom: 10px; }
   font-size: 15px;
   font-family: inherit;
 }
+.list-tools { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; }
 .search-input { width: min(420px, 100%); margin: 4px auto 0; display: block; }
+.sort-select { padding: 10px; border: none; border-radius: 6px; font: inherit; }
+.backup-status { font-size: 13px; opacity: .75; min-height: 1.3em; }
 .entry-text { min-height: 130px; margin: 16px 0 0; resize: vertical; }
 
 /* ---------- 书架 / 影单 ---------- */

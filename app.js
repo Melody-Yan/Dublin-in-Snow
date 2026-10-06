@@ -141,10 +141,11 @@ function initLibrary(root, cfg) {
   const $ = sel => root.querySelector(sel);
   const listEl = $('.lib-list'), pagerEl = $('.pager'), quoteEl = $('.category-quote');
   const searchEl = $('.search-input'), formEl = $('.entry-form'), addBtn = $('.add-btn');
+  const sortEl = $('.sort-select');
   const rating = initRating($('.rating'));
 
   let cat = cfg.categories[0].id;
-  let page = 1, query = '', editingId = null;
+  let page = 1, query = '', editingId = null, sort = 'added-desc';
 
   $('.f-title').placeholder = cfg.labels[0];
   $('.f-sub').placeholder = cfg.labels[1];
@@ -197,9 +198,14 @@ function initLibrary(root, cfg) {
   function render() {
     const q = query.trim().toLowerCase();
     const items = all()
-      .filter(x => q || x.category === cat)      // 有搜索词时跨分类找，不要假装别处的内容不存在
+      .filter(x => q || x.category === cat)
       .filter(x => !q || [x.title, sub(x), x.tags, x.review]
-        .some(v => String(v || '').toLowerCase().includes(q)));
+        .some(v => String(v || '').toLowerCase().includes(q)))
+      .sort((a, b) => sort === 'rating-desc'
+        ? (Number(b.rating) || 0) - (Number(a.rating) || 0)
+        : sort === 'title-asc'
+          ? String(a.title || '').localeCompare(String(b.title || ''), 'zh-CN')
+          : Number(b.id || 0) - Number(a.id || 0));
 
     const state = paginate(items, page, 4);
     page = state.page;
@@ -236,6 +242,7 @@ function initLibrary(root, cfg) {
   addBtn.onclick = () => openForm(null);
   $('.f-cancel').onclick = closeForm;
   searchEl.addEventListener('input', () => { query = searchEl.value; page = 1; render(); });
+  if (sortEl) sortEl.addEventListener('change', () => { sort = sortEl.value; page = 1; render(); });
 
   formEl.addEventListener('submit', e => {
     e.preventDefault();
@@ -424,6 +431,13 @@ function initSettings(root) {
   if (!root) return;
   const $ = sel => root.querySelector(sel);
   const KEYS = DB.KEYS;
+  const backupStatus = $('.backup-status');
+  const count = value => Array.isArray(value) ? value.length : 0;
+  const summary = data => `书籍 ${count(data.books)} · 电影 ${count(data.movies)} · 手札 ${count(data.entries)} · 音乐 ${count(data.musicLinks)}`;
+  const updateBackupStatus = () => {
+    const at = localStorage.getItem('lastBackupAt');
+    if (backupStatus) backupStatus.textContent = at ? `上次导出：${new Date(at).toLocaleString()}` : '还没有导出过备份。';
+  };
 
   function renderList() {
     const tracks = DB.get('musicLinks', []);
@@ -485,8 +499,11 @@ function initSettings(root) {
     );
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `都柏林的雪-备份-${new Date().toISOString().slice(0, 10)}.json`;
+    const now = new Date();
+    localStorage.setItem('lastBackupAt', now.toISOString());
+    a.download = `都柏林的雪-备份-${now.toISOString().slice(0, 10)}.json`;
     a.click();
+    updateBackupStatus();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
@@ -503,14 +520,22 @@ function initSettings(root) {
         const data = parsed && parsed.data ? parsed.data : parsed;
         const found = KEYS.filter(k => typeof data[k] === 'string');
         if (!found.length) throw new Error('没有可识别的数据');
-        if (!confirm('导入会覆盖当前的书籍、影单、手札和音乐设置，确定继续吗？')) return;
+        const values = {};
         found.forEach(k => {
-          try {
-            const value = JSON.parse(data[k]);
-            DB.set(k, value);
-          } catch { throw new Error('数据格式错误'); }
+          values[k] = JSON.parse(data[k]);
+          if (!Array.isArray(values[k])) throw new Error('数据格式错误');
         });
-        alert('导入完成，页面将重新载入。');
+        const choice = prompt(`备份内容：${summary(values)}\n\n输入「合并」把新内容追加进来，输入「覆盖」替换现有内容，其他内容取消。`, '合并');
+        if (!['合并', '覆盖'].includes(choice)) return;
+        found.forEach(k => {
+          if (choice === '覆盖') DB.set(k, values[k]);
+          else {
+            const current = DB.get(k, []);
+            const incoming = values[k];
+            DB.set(k, k === 'musicLinks' ? [...new Set([...current, ...incoming])] : [...current, ...incoming]);
+          }
+        });
+        alert(`导入完成（${choice}）：${summary(values)}，页面将重新载入。`);
         location.reload();
       } catch (err) {
         alert('备份文件无法识别。');
@@ -521,6 +546,7 @@ function initSettings(root) {
   };
 
   renderList();
+  updateBackupStatus();
 }
 
 /* ================= 播放器（全站唯一，切视图不打断） ================= */

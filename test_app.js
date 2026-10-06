@@ -86,6 +86,8 @@ ok('index.html 引用 style.css', html.includes('href="style.css"'));
 ok('index.html 引用 app.js', html.includes('src="app.js"'));
 ok('index.html 无内联脚本', /<script(?![^>]*\bsrc=)[^>]*>/.test(html) === false);
 ok('index.html 只有一个 body 标签', (html.match(/<body/g) || []).length === 1);
+ok('设置页有备份状态与排序控件', html.includes('backup-status') && (html.match(/class="sort-select"/g) || []).length === 2);
+ok('备份支持合并和覆盖', appSrc.includes('合并') && appSrc.includes('覆盖') && appSrc.includes('lastBackupAt'));
 ok('index.html 不再引用已删除的页面或 script.js',
   !/(books|movies|journal|settings)\.html/.test(html) && !html.includes('script.js'));
 // 启动关键路径上不许有第三方域名：TWA 装在国产 ROM 上时，一个拉不动的 CDN 就是永远停在启动图
@@ -162,7 +164,7 @@ ok('无音乐时整块隐藏播放器而不是报警', appSrc.includes("panel.cl
   && !/没有找到音乐/.test(appSrc));
 ok('journal 用 id 寻址而非下标', !/editEntry\(index\)/.test(appSrc) && appSrc.includes("String(e.id) === String(id)"));
 ok('编辑走就地更新而不是新增', appSrc.includes('Object.assign(items[i], patch)'));
-ok('删除有二次确认', (appSrc.match(/confirm\(/g) || []).length >= 3);
+ok('删除有二次确认', (appSrc.match(/confirm\(/g) || []).length >= 2 && appSrc.includes('prompt('));
 
 // ---- 5. PWA：manifest / 图标 / Service Worker（打包成 APK 全靠这三样） ----
 const manifest = JSON.parse(read('manifest.json'));
