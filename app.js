@@ -2,28 +2,84 @@
    数据 / 转义 / 分页 / 评分 / 播放器 / 书架·影单·手札·设置 / 哈希路由 */
 
 /* ================= 数据 ================= */
-const DB = {
-  get(key, fallback = []) {
+const DB = (() => {
+  const KEYS = ['books', 'movies', 'entries', 'musicLinks'];
+  const memory = Object.create(null);
+  KEYS.forEach(key => {
     try {
       const raw = localStorage.getItem(key);
-      if (raw === null) return fallback;
-      const value = JSON.parse(raw);
-      return value === null ? fallback : value;
+      memory[key] = raw === null ? [] : JSON.parse(raw);
+      if (memory[key] === null) memory[key] = [];
     } catch (e) {
       console.warn('[DB] 读取失败：' + key, e);
-      return fallback;               // 数据损坏时不让整页脚本崩掉
+      memory[key] = [];
     }
-  },
-  set(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch (e) {
-      alert('保存失败：浏览器存储不可用或空间已满。');
-      return false;
-    }
+  });
+
+  let dbPromise = null;
+  function open() {
+    if (dbPromise || typeof indexedDB === 'undefined') return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open('dublin-in-snow', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('data', { keyPath: 'key' });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
   }
-};
+  function idbGetAll(db) {
+    return new Promise((resolve, reject) => {
+      const req = db.transaction('data').objectStore('data').getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function idbPut(db, key, value) {
+    return new Promise((resolve, reject) => {
+      const req = db.transaction('data', 'readwrite').objectStore('data').put({ key, value });
+      req.onsuccess = resolve;
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function init() {
+    const db = await open();
+    if (!db) return;
+    const records = await idbGetAll(db);
+    if (records.length) {
+      records.forEach(r => { memory[r.key] = r.value; });
+      // 恢复 localStorage 只是为了兼容旧版本代码和导出，不再作为唯一存储。
+      KEYS.forEach(key => { try { localStorage.setItem(key, JSON.stringify(memory[key])); } catch {} });
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('dbready'));
+      return;
+    }
+    await Promise.all(KEYS.map(key => idbPut(db, key, memory[key])));
+  }
+  function get(key, fallback = []) {
+    if (!KEYS.includes(key)) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw === null) return fallback;
+        const value = JSON.parse(raw);
+        return value === null ? fallback : value;
+      } catch (e) {
+        console.warn('[DB] 读取失败：' + key, e);
+        return fallback;
+      }
+    }
+    const value = memory[key];
+    return value === undefined || value === null ? fallback : value;
+  }
+  function set(key, value) {
+    memory[key] = value;
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    open()?.then(db => idbPut(db, key, value)).catch(() => {});
+    return true;
+  }
+  function exportData() {
+    return KEYS.reduce((out, key) => { out[key] = JSON.stringify(memory[key]); return out; }, {});
+  }
+  return { KEYS, get, set, init, exportData };
+})();
 
 /* ================= 文本 ================= */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
@@ -367,7 +423,7 @@ function initJournal(root) {
 function initSettings(root) {
   if (!root) return;
   const $ = sel => root.querySelector(sel);
-  const KEYS = ['books', 'movies', 'entries', 'musicLinks'];
+  const KEYS = DB.KEYS;
 
   function renderList() {
     const tracks = DB.get('musicLinks', []);
@@ -420,15 +476,11 @@ function initSettings(root) {
   };
 
   $('.export-btn').onclick = () => {
-    const data = {};
-    KEYS.forEach(k => {
-      const v = localStorage.getItem(k);
-      if (v !== null) data[k] = v;
-    });
+    const data = DB.exportData();
     if (!Object.keys(data).length) { alert('还没有可以备份的内容。'); return; }
 
     const blob = new Blob(
-      [JSON.stringify({ app: '都柏林的雪', exportedAt: new Date().toISOString(), data }, null, 2)],
+      [JSON.stringify({ app: '都柏林的雪', version: 2, exportedAt: new Date().toISOString(), data }, null, 2)],
       { type: 'application/json' }
     );
     const a = document.createElement('a');
@@ -452,7 +504,12 @@ function initSettings(root) {
         const found = KEYS.filter(k => typeof data[k] === 'string');
         if (!found.length) throw new Error('没有可识别的数据');
         if (!confirm('导入会覆盖当前的书籍、影单、手札和音乐设置，确定继续吗？')) return;
-        found.forEach(k => localStorage.setItem(k, data[k]));
+        found.forEach(k => {
+          try {
+            const value = JSON.parse(data[k]);
+            DB.set(k, value);
+          } catch { throw new Error('数据格式错误'); }
+        });
         alert('导入完成，页面将重新载入。');
         location.reload();
       } catch (err) {
@@ -570,6 +627,20 @@ const Music = (function () {
 /* ================= 路由：五个视图，一个页面 ================= */
 const VIEWS = ['home', 'books', 'movies', 'journal', 'settings'];
 
+function globalSearch(q) {
+  q = String(q || '').trim().toLowerCase();
+  if (!q) return;
+  const hits = [];
+  ['books', 'movies'].forEach(key => DB.get(key, []).forEach(x => {
+    const text = [x.title, x.author, x.director, x.tags, x.review].join(' ').toLowerCase();
+    if (text.includes(q)) hits.push(`${key === 'books' ? '书架' : '影单'}：${x.title}`);
+  }));
+  DB.get('entries', []).forEach(x => {
+    if (String(x.text || '').toLowerCase().includes(q)) hits.push(`手札·${x.tab}：${String(x.text).slice(0, 30)}`);
+  });
+  alert(hits.length ? `找到 ${hits.length} 条：\n\n${hits.join('\n')}` : '没有找到匹配内容。');
+}
+
 function route() {
   const want = location.hash.replace(/^#\/?/, '');
   const view = VIEWS.includes(want) ? want : 'home';
@@ -587,11 +658,17 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-function init() {
+async function init() {
+  await DB.init().catch(() => {});
+  Music.refresh();
   initLibrary(document.querySelector('[data-view="books"]'), LIBRARIES.books);
   initLibrary(document.querySelector('[data-view="movies"]'), LIBRARIES.movies);
   initJournal(document.querySelector('[data-view="journal"]'));
   initSettings(document.querySelector('[data-view="settings"]'));
+  const global = document.querySelector('.global-search');
+  if (global) global.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); globalSearch(global.value); }
+  });
   window.addEventListener('hashchange', route);
   route();
 }

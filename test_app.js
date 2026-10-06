@@ -108,7 +108,7 @@ ok('每个视图都有对应 section', JSON.stringify(sections.slice().sort()) =
   'sections=' + sections.join('/') + ' views=' + views.join('/'));
 
 const links = [...html.matchAll(/data-view-link="([^"]+)"/g)].map(m => m[1]);
-ok('导航项都能路由到真实视图', links.every(v => views.includes(v)) && links.length === 4, links.join('/'));
+ok('导航项都能路由到真实视图', links.every(v => views.includes(v)) && [...new Set(links)].length === views.length, links.join('/'));
 ok('主页有入口（标题指回 #home）', html.includes('href="#home"'));
 ok('设置的空音乐提示指向 #settings', /id="music-hint"[\s\S]{0,120}href="#settings"/.test(html));
 ok('route() 写 body.dataset.view 驱动背景', appSrc.includes('document.body.dataset.view = view'));

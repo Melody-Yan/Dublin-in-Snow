@@ -25,6 +25,13 @@
         <a href="#journal" class="btn" data-view-link="journal">心境手札</a>
         <a href="#settings" class="btn" data-view-link="settings">设置</a>
       </nav>
+      <nav class="mobile-nav" aria-label="底部导航">
+        <a href="#home" data-view-link="home">首页</a>
+        <a href="#books" data-view-link="books">书架</a>
+        <a href="#movies" data-view-link="movies">影单</a>
+        <a href="#journal" data-view-link="journal">手札</a>
+        <a href="#settings" data-view-link="settings">设置</a>
+      </nav>
     </header>
 
     <p id="music-hint" class="music-hint hidden">还没有音乐 · <a href="#settings">去设置里添加</a></p>
@@ -43,6 +50,12 @@
     <main>
       <!-- ============ 主页 ============ -->
       <section class="view" data-view="home">
+        <div class="home-actions" aria-label="快捷入口">
+          <input class="global-search" type="search" placeholder="全局搜索书、电影或手札" aria-label="全局搜索">
+          <a class="home-action" href="#books">添加一本书</a>
+          <a class="home-action" href="#movies">添加一部电影</a>
+          <a class="home-action" href="#journal">写一条手札</a>
+        </div>
         <div class="poem">
           <h3>What can I hold you with?</h3>
           <p>
